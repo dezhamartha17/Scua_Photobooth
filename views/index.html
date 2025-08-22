@@ -1,0 +1,1597 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Photo Booth</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/sweetalert2@11" />
+    <link rel="stylesheet" type="text/css" href="style.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.css" />
+    <script type="text/javascript" src="https://app.midtrans.com/snap/snap.js" data-client-key="Mid-client-rCxQwLCkAkBfkt9T"></script>
+    <!-- <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="Mid-client-rCxQwLCkAkBfkt9T"></script> -->
+    <style>
+        .photo-shadow {
+            position: absolute;
+            width: 100px;
+            /* Adjust size as needed */
+            height: auto;
+            opacity: 0.5;
+            /* Make it semi-transparent for the shadow effect */
+            transform: translateX(0);
+        }
+        
+        @keyframes slideToRight {
+            0% {
+                transform: translateX(0);
+                opacity: 0.5;
+            }
+            100% {
+                transform: translateX(200px);
+                /* Adjust how far to slide */
+                opacity: 1;
+            }
+        }
+        
+        .app-container.embed {
+            top: 75%
+        }
+        
+        .blur-greyscale {
+            filter: blur(10px) grayscale(100%);
+            transition: filter 0.5s ease;
+        }
+        
+        .image-container {
+            position: relative;
+            display: inline-block;
+            text-align: center;
+        }
+        
+        .image-container p {
+            position: absolute;
+            top: 0;
+            left: 50%;
+            transform: translate(-50%, 0);
+            background-color: rgba(255, 255, 255, 0.7);
+            /* Opsional: memberikan background pada teks */
+            padding: 5px;
+            font-size: 4vh;
+            font-weight: bold;
+            z-index: 1;
+            margin-top: 35vh;
+        }
+        
+        .image-container img {
+            display: block;
+            width: 100%;
+            height: auto;
+        }
+        /* Gaya untuk elemen latar belakang */
+        /* Frame preview utama */
+        
+        .grayscale {
+            filter: grayscale(100%);
+        }
+        
+        #framePreview {
+            position: relative;
+            /* Penting untuk positioning anak elemen ::after */
+            width: 100%;
+            height: 100%;
+            z-index: 1;
+            /* Pastikan berada di atas elemen lain dengan z-index lebih rendah */
+        }
+        /* Lapisan gambar SVG */
+        
+        .back-button,
+        .button-style {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 1vw 2vw;
+            /* Responsif padding */
+            font-family: 'Poppins';
+            font-size: 2rem;
+            /* Ukuran teks yang lebih besar */
+            /* Ukuran teks yang konsisten */
+            border-radius: 0.1vw;
+            cursor: pointer;
+            gap: 0.5vw;
+            /* Jarak antara gambar dan teks */
+            width: 100%;
+            /* Menjadikan tombol selebar container */
+            max-width: 300px;
+            /* Batas maksimal lebar tombol */
+        }
+        
+        .back-button img,
+        .button-style img {
+            width: 6vw;
+            /* Ukuran gambar yang konsisten */
+            height: auto;
+        }
+        
+        .back-button {
+            border: 2px solid #E7D0AB;
+            background-color: transparent;
+            color: white;
+        }
+        
+        .button-style {
+            background-color: #E7D0AB;
+            color: #572415;
+        }
+        
+        .back-button:hover,
+        .button-style:hover {
+            background-color: #E7D0AB;
+            color: #572415;
+        }
+        
+        .gm-selection {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            /* 3 kolom */
+            grid-template-rows: auto;
+            /* Baris otomatis */
+            justify-items: center;
+            /* Rata tengah setiap item */
+            gap: 2vw;
+            /* Jarak antar elemen grid */
+            margin-bottom: -10vh;
+        }
+        
+        .grid-item img {
+            width: 17vw;
+            max-width: 30vw;
+            height: auto;
+            border-radius: 1vw;
+            box-sizing: border-box;
+        }
+        
+        button:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+        }
+        
+        .header-logo {
+            width: 100%;
+            position: relative;
+            margin: 0;
+            padding: 0;
+            display: flex;
+            justify-content: center;
+            /* Center the image horizontally */
+        }
+        
+        .header-logo img {
+            width: 100%;
+            height: auto;
+            display: block;
+            object-fit: cover;
+            /* Ensures the image covers the full width */
+        }
+        
+        @keyframes shuffleCards {
+            0% {
+                transform: translateX(0) scale(1);
+            }
+            50% {
+                transform: translateX(-20px) scale(1);
+                /* Ubah nilai sesuai kebutuhan untuk pergeseran horizontal */
+            }
+            100% {
+                transform: translateX(0) scale(1);
+            }
+        }
+        
+        @keyframes mergeCards {
+            0% {
+                transform: translateX(0) scale(1);
+                opacity: 1;
+            }
+            100% {
+                transform: translateX(-100px) scale(0.9);
+                /* Ubah nilai sesuai kebutuhan untuk pergeseran horizontal */
+                opacity: 1;
+            }
+        }
+        
+        .photo-container .printing-photo {
+            animation: shuffleCards 1s ease-out forwards, mergeCards 1s ease-in forwards;
+            margin-right: 10px;
+            /* Spasi antar foto */
+        }
+        
+        .photo-container {
+            display: flex;
+            flex-direction: row;
+            /* Pastikan foto-foto berjejer ke samping */
+            overflow-x: hidden;
+            /* Mencegah scroll horizontal jika foto lebih banyak dari lebar kontainer */
+            overflow-y: hidden;
+            /* Mencegah scroll vertikal */
+            white-space: nowrap;
+            /* Mencegah foto-foto berpindah baris */
+            align-items: center;
+            /* Untuk memusatkan foto secara vertikal dalam kontainer */
+        }
+        
+        .btn-primary1 {
+            position: absolute;
+            /* Positioning the button */
+            bottom: 70vh;
+            /* Position from the bottom using viewport height */
+            right: 5vw;
+            /* Position from the right using viewport width */
+            background-color: #007bff;
+            /* Button color */
+            color: white;
+            /* Text color */
+            border: none;
+            /* Remove default border */
+            padding: 1vh 2vw;
+            /* Padding using viewport units */
+            border-radius: 0.5vh;
+            /* Rounded corners using viewport units */
+            opacity: 0;
+            /* Start hidden */
+            transition: opacity 0.3s ease;
+            /* Smooth transition for opacity */
+            cursor: pointer;
+            /* Pointer cursor on hover */
+        }
+        /* Show button on hover over the button area */
+        
+        .btn-primary1:hover {
+            opacity: 1;
+            /* Make button visible */
+        }
+        
+        #countdown-video-container {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 50%;
+            height: auto;
+            max-width: 300px;
+            /* Atur lebar maksimum sesuai kebutuhan */
+            z-index: 10;
+            /* Pastikan berada di atas elemen canvas */
+            pointer-events: none;
+            /* Menghindari interaksi dengan elemen ini */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            /* Menyelaraskan elemen anak secara vertikal dan horizontal */
+            flex-direction: column;
+        }
+
+         #countdown-video-container2 {
+            position: absolute;
+            top: 45%;
+            left: 50%;
+            transform: translate(-243%, -50%);
+            width: 40%;
+            height: auto;
+            max-width: 200px;
+            /* Atur lebar maksimum sesuai kebutuhan */
+            z-index: 10;
+            /* Pastikan berada di atas elemen canvas */
+            pointer-events: none;
+            /* Menghindari interaksi dengan elemen ini */
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        
+        @keyframes countdownAnimation {
+            0% {
+                opacity: 0;
+                transform: scale(0.5);
+            }
+            50% {
+                opacity: 1;
+                transform: scale(1.2);
+            }
+            100% {
+                opacity: 1;
+                transform: scale(1);
+            }
+        }
+        
+        .countdown-text {
+            font-size: 3rem;
+            font-weight: bold;
+            animation: countdownAnimation 1s ease-in-out infinite;
+            /* Infinite loop for continuous animation */
+        }
+        
+        #countdown {
+            position: fixed;
+            top: 26%;
+            left: 46%;
+            transform: translate(-50%, -50%);
+            font-size: 3rem;
+            font-weight: bold;
+            color: #ffffff;
+            z-index: 1000;
+        }
+        /* Ornament style */
+        
+        .ornament2 {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            /* Customize the ornament styles as needed */
+            width: 100px;
+            height: 100px;
+            background: url('path-to-your-ornament-image.png') no-repeat center center;
+            background-size: contain;
+            opacity: 0;
+            transition: opacity 0.3s ease-in-out;
+            z-index: 1000;
+        }
+        /* Show ornament */
+        
+        .ornament2.show {
+            opacity: 1;
+        }
+        .photo-grid1 img {
+            opacity: 0;
+            transform: scale(0.5);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        
+        .photo-grid1 img.show {
+            opacity: 1;
+            transform: scale(1);
+        }
+        
+        #responsiveImage {
+            width: 90vw;
+            /* 90% of the viewport width */
+            height: auto;
+            /* Maintain aspect ratio */
+            max-width: 100%;
+            max-height: 100vh;
+            /* Make sure the image doesn't exceed viewport height */
+            display: block;
+            /* Center the image */
+            margin: 0 auto;
+            /* Center the image horizontally */
+        }
+        
+        #video-container {
+            position: relative;
+            width: 100%;
+            height: 75vh;
+            /* 3/4 of the viewport height */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+        }
+        
+        #video-webcam {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            /* Menjaga aspek rasio dan menampilkan video dengan cara terbaik */
+            transform: rotate(0deg);
+            /* Atur sesuai kebutuhan */
+            /* Menghapus rotasi */
+        }
+        
+        #canvas {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            /* Menjaga aspek rasio dan menampilkan video dengan cara terbaik */
+            transform: rotate(0deg);
+            /* Atur sesuai kebutuhan */
+            /* Menghapus rotasi */
+        }
+      #canvas2 {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            /* Menjaga aspek rasio dan menampilkan video dengan cara terbaik */
+            transform: rotate(0deg);
+            /* Atur sesuai kebutuhan */
+            /* Menghapus rotasi */
+        }
+        #photo-result {
+            width: 100%;
+            height: 17vh;
+            /* 1/4 of the viewport height */
+            background-color: #572415;
+            /* Just an example background color */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        #photo-result img {
+            max-width: 66%;
+            max-height: 66%;
+            object-fit: contain;
+        }
+        
+        .header-app {
+            width: 100%;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2vw;
+            /* Padding relatif terhadap lebar viewport */
+            box-sizing: border-box;
+            /* Sertakan padding dan border dalam ukuran total */
+            max-width: 100%;
+            /* Lebar maksimum seukuran viewport */
+            margin: auto;
+            margin-top: 14vh;
+            /* Tengah-kan elemen */
+        }
+        /* Gambar di dalam header agar responsif */
+        
+        .header-app img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            /* Menghilangkan jarak bawah pada gambar inline */
+            border-radius: 1vw;
+            /* Radius border relatif terhadap lebar viewport */
+            padding: 0;
+            /* Hilangkan padding dari gambar */
+            box-sizing: border-box;
+            margin-top: -22vh;
+            /* Sertakan padding dan border dalam ukuran total */
+        }
+        
+        .header-app2 {
+            width: 70vw;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 2vw;
+            box-sizing: border-box;
+            max-width: 800vh;
+            margin: auto;
+        }
+        
+        .header-app2 img {
+            max-width: 100%;
+            height: auto;
+            display: block;
+            /* Menghilangkan jarak bawah pada gambar inline */
+            border-radius: 1vw;
+            /* Radius border relatif terhadap lebar viewport */
+            padding: 0;
+            /* Hilangkan padding dari gambar */
+            box-sizing: border-box;
+            /* Sertakan padding dan border dalam ukuran total */
+            margin-top: -2vh;
+        }
+        
+        .photo-grid1 {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            height: 100%;
+            gap: 5px;
+            /* Reduced gap between images */
+        }
+        
+        .photo-grid1 img {
+            width: 8000px;
+            /* Slightly increased size to make images bigger */
+            max-height: 100%;
+            object-fit: contain;
+            padding: 0px;
+        }
+        
+        .message {
+            font-size: 1.2em;
+            margin-top: 10px;
+        }
+        
+        .details {
+            margin-top: 20px;
+            font-size: 0.9em;
+            color: #555;
+        }
+        
+        .container21 {
+            position: relative;
+            width: 100vw;
+            height: 60vh;
+            /* Tambahkan ini untuk memastikan container memenuhi layar */
+            display: flex;
+            justify-content: center;
+            /* Menyelaraskan secara horizontal */
+            align-items: center;
+            /* Menyelaraskan secara vertikal */
+            margin: 0;
+            /* Hilangkan margin untuk memastikan posisi di tengah */
+            padding: 0;
+            background: url('../public/Group 283 (2).svg') no-repeat center center;
+            background-size: contain;
+            background-position: center top;
+            /* Sesuaikan ukuran gambar latar belakang */
+        }
+        
+        .box {
+            position: absolute;
+            width: 45vw;
+            height: 35vh;
+            opacity: 1;
+            transition: transform 1s ease, opacity 1s ease;
+            background-size: cover;
+            background-position: center;
+            margin-left: 1vh;
+            margin-bottom: 1vh;
+        }
+        /* Transformasi untuk kondisi aktif */
+        
+        .container21.active .box:nth-child(1) {
+            transform: translate(-15%, -15%);
+            opacity: 1;
+        }
+        
+        .container21.active .box:nth-child(2) {
+            transform: translate(-7.5%, -7.5%);
+            opacity: 1;
+        }
+        
+        .container21.active .box:nth-child(3) {
+            transform: translate(0, 0);
+            /* Tetap diam */
+            opacity: 1;
+        }
+        
+        .container21.active .box:nth-child(4) {
+            transform: translate(7.5%, 7.5%);
+            opacity: 1;
+        }
+        
+        .container21.active .box:nth-child(5) {
+            transform: translate(15%, 15%);
+            opacity: 1;
+        }
+        /* Aturan default saat container tidak aktif */
+        
+        .container21:not(.active) .box {
+            transform: translate(0, 0);
+            opacity: 1;
+        }
+        /* Box tengah tetap terlihat walau container tidak aktif */
+        
+        .container21:not(.active) .box:nth-child(3) {
+            opacity: 1;
+        }
+        
+        input[type="range"] {
+            width: 100%;
+            /* Lebar slider 100% dari container */
+            -webkit-appearance: none;
+            /* Menghilangkan gaya default slider pada beberapa browser */
+            height: 8px;
+            /* Ketebalan slider */
+            background: #ddd;
+            /* Warna latar belakang slider */
+            border-radius: 5px;
+            /* Radius sudut slider */
+            outline: none;
+            /* Menghilangkan outline pada slider */
+            opacity: 0.7;
+            /* Transparansi slider */
+            transition: opacity .2s;
+            /* Transisi transparansi */
+        }
+        /* Background images for .box elements */
+        
+        .box:nth-child(1),
+        .box:nth-child(2),
+        .box:nth-child(3),
+        .box:nth-child(4) {
+            /* Sesuaikan ukuran gambar latar belakang */
+        }
+        /* Container to align buttons side by side */
+        
+        .button-container {
+            display: flex;
+            justify-content: center;
+            /* Centers the buttons horizontally */
+            gap: 2vw;
+            /* Adds space between the buttons */
+        }
+        /* Specific styling for .start-button */
+        
+        .start-button,
+        #start-button {
+            border: none;
+            padding: 0;
+            width: 20vw;
+            /* Adjust the width based on the viewport */
+            height: auto;
+            /* Keep aspect ratio */
+            cursor: pointer;
+            background: none;
+            /* Remove default button background */
+        }
+        /* Ensures images fill the buttons */
+        
+        .start-button img,
+        #start-button img {
+            width: 100%;
+            height: 100%;
+            /* Fill the button fully */
+            object-fit: cover;
+            /* Ensures the image fits within the button */
+        }
+        /* Add in the style section */
+       .photo-counter {
+    position: absolute;
+    top: 10px; /* Adjust as needed */
+    left: 50%;
+    transform: translateX(-50%);
+   
+    color: white;
+    padding: 12px 24px;
+    border-radius: 25px;
+    font-size: 1.5rem;
+    font-weight: bold;
+    z-index: 1000;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    text-align: center;
+  
+}
+
+.photo-counter span {
+    color: #E7D0AB; /* Menggunakan warna aksen dari tema Anda */
+    margin-right: 5px;
+}
+    </style>
+</head>
+
+<body class="">
+    <div id="app">
+        <a btn href="#" id="close-button" class="close-button" onclick="window.top.close(); return false">X</a>
+        <section id="welcome-screen">
+            <h1 class="text-white" hidden>Welcome to Photo Booth</h1>
+            <div class="tombolstart">
+                <button class="start-button"> <img src="../public/Button Fill.png" alt="Ambil Vidio" style="width: 100%; height: 100%;"></button>
+                <button id="start-button"> <img src="../public/Button Fill-1.png" alt="Ambil Vidio" style="width: 100%; height: 100%;"></button>
+                <button id="config" class="btn-primary1">Show Config</button>
+                <input type="number" class="btn-primary1" id="priceInput" value="10000" min="0" />
+            </div>
+        </section>
+        <section id="gm-selection" class="screen hidden">
+            <header class="header-logo">
+                <img src="../public/images/Logo Atas.svg">
+            </header>
+            <header class="header-app2">
+                <img src="../public/images/Frame 28.png">
+            </header>
+            <div id="selected-gm-container" class="selected-gm">
+                <img id="selected-gm-image" src="../public/GM Utut.png" alt="Selected GM" width="200px">
+
+            </div>
+            <main class="naik">
+                <div class="gm-selection selection-grid">
+                    <div class="gm-button grid-item" data-gm="Utut" data-img="../public/GM Utut.png" data-img-active="../public/images/utut_select.png" data-img-inactive="../public/images/utut_unselect.png">
+                        <img src="../public/images/utut_unselect.png" alt="Utut" width="200px" onclick="selectGM('Utut')">
+                    </div>
+                    <div class="gm-button grid-item" data-gm="Susanto" data-img="../public/GM Susanto.png" data-img-active="../public/images/susanto_selected.png" data-img-inactive="../public/images/susanto_unselected.png">
+                        <img src="../public/images/susanto_unselected.png" alt="Susanto" width="150px" onclick="selectGM('Susanto')">
+                    </div>
+                    <div class="gm-button grid-item" data-gm="Irene" data-img="../public/GM Irene.png" data-img-active="../public/images/Irene_selected.png" data-img-inactive="../public/images/irene_unselected.png">
+                        <img src="../public/images/irene_unselected.png" alt="Irene" width="150px" onclick="selectGM('Irene')">
+                    </div>
+                    <div class="gm-button grid-item" data-gm="citra" data-img="../public/GM Citra.png" data-img-active="../public/images/citra_selected.png" data-img-inactive="../public/images/citra_unselected.png">
+                        <img src="../public/images/citra_unselected.png" alt="citra" width="150px" onclick="selectGM('citra')">
+                    </div>
+                    <div class="gm-button grid-item" data-gm="medina" data-img="../public/GM Medina.png" data-img-active="../public/images/medina_select.png" data-img-inactive="../public/images/medina_unselect.png">
+                        <img src="../public/images/medina_unselect.png" alt="medina" width="150px" onclick="selectGM('medina')">
+                    </div>
+                    <div class="gm-button grid-item" data-gm="Novendra" data-img="../public/GM Novendra.png" data-img-active="../public/images/novendra_selected.png" data-img-inactive="../public/images/novendra_unselected.png">
+                        <img src="../public/images/novendra_unselected.png" alt="Novendra" width="150px" onclick="selectGM('Novendra')">
+                    </div>
+                </div>
+            </main>
+            <footer class="button-container">
+                <button class="back-button" data-back-to="welcome-screen" style="border: 2px solid #E7D0AB; background-color: transparent; color: white; font-family: 'Poppins'; ">
+                   <img src="../public/images/Group (5).png" alt="Icon"style="width: auto; height: 30px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;">  Kembali
+               </button>
+                <!-- <button id="select-pose-button" style="background-color: #E7D0AB; color: #572415; font-family: 'Poppins'; ">
+                   <img src="../public/images/Group (7).png" alt="Icon">
+                   Pilih Bingkai
+               </button> -->
+                <button id="select-gm-button" class="button-style" style="background-color: #E7D0AB; color:#572415 "><img src="../public/images/Group (7).png" style="width: auto; height: 36px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;"> Selanjutnya</button>
+            </footer>
+        </section>
+
+        <section id="pose-selection" class="hidden pose-background">
+            <header class="header-logo">
+                <img src="../public/images/Logo Atas.svg">
+            </header>
+            <header class="header-app">
+                <img src="../public/images/Frame 28 (6).png">
+            </header>
+            <main>
+                <!-- <div class="pose-options container">
+                    <div class="pose-option card selected" data-pose="pose1" id="card1">
+                        <img src="../public/images/gm-pose/posegmcitra.png" alt="Pose 1">
+                    </div>
+                    <div class="pose-option card" data-pose="pose2" id="card2">
+                        <img src="../public/images/gm-pose/pose2gmcitra.png" alt="Pose 2">
+                    </div>
+                </div> -->
+                <div class="container">
+                    <div class=" pose-option card active card card1" id="card1" data-pose="pose1">
+                        <img src="../public/images/gm-pose/posegmcitra.png" alt="Image 1">
+                    </div>
+                    <div class=" pose-option card inactive card card2" id="card2" data-pose="pose2">
+                        <img src="../public/images/gm-pose/pose2gmcitra.png" alt="Image 2">
+                    </div>
+                    <img src="../public/Ornament 1.1.png" class="ornament card1 ornament ornament-top-left" id="ornament1">
+                    <img src="../public/Ornament 2.1.png" class="ornament card2 ornament ornament-bottom-right" id="ornament2">
+                </div>
+            </main>
+            <footer class="button-container">
+                <button class="back-button" data-back-to="gm-selection" style="border: 2px solid #E7D0AB; background-color: transparent; color: white; font-family: 'Poppins'; ">
+                   <img src="../public/images/Group (5).png" alt="Icon" style="width: auto; height: 30px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;"> Kembali
+               </button>
+                <!-- <button id="select-pose-button" style="background-color: #E7D0AB; color: #572415; font-family: 'Poppins'; ">
+                   <img src="../public/images/Group (7).png" alt="Icon">
+                   Pilih Bingkai
+               </button> -->
+                <button id="select-pose-button" class="button-style" style="background-color: #E7D0AB; color:#572415"><img src="../public/images/Group (7).png" style="width: auto; height: 36px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;"> Selanjutnya</button>
+            </footer>
+        </section>
+        <section id="frame-selection" class="hidden">
+            <header class="header-logo">
+                <img src="../public/images/Logo Atas.svg">
+            </header>
+            <header class="header-app">
+                <img src="../public/images/Frame 28 (5).png">
+            </header>
+            <!-- <div class="frame-preview" id="framePreview">
+                <img src="../public/images/Group 283.svg" />
+            </div> -->
+            <div id="frameBackground"></div>
+            <div class="frame-preview" id="framePreview">
+            </div>
+            <main>
+                <div class="swiper-container2">
+                    <div class="swiper-wrapper" style="width: 80vw;">
+                        <div class="swiper-slide">
+                            <div class="frame-option" data-frame="frame1">
+                                <img src="../public/Frame Cream.svg" alt="Frame 4" / style="background-color: #363636;">
+                            </div>
+                        </div>
+                        <div class="swiper-slide">
+                            <div class="frame-option" data-frame="frame2">
+                                <img src="../public/Frame Kuning.svg" alt="Frame 4" style="background-color: #363636;" />
+                            </div>
+                        </div>
+                        <div class="swiper-slide">
+                            <div class="frame-option" data-frame="frame3">
+                                <img src="../public/Frame Hijau.svg" alt="Frame 4" style="background-color: #363636;" />
+
+                            </div>
+                        </div>
+                        <div class="swiper-slide">
+                            <div class="frame-option" data-frame="frame4">
+                                <img src="../public/Frame Merah.svg" alt="Frame 4" style="background-color: #363636;" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </main>
+            <footer>
+                <div class="button-container" style="padding: 10px;">
+                    <!-- <img class="next-button-img back-button" data-back-to="pose-selection" src="../public/images/Frame 10.png" alt="Next" width="100px">
+                <img id="select-frame-button" class="next-button-img" src="../public/images/Frame 11 (2).png" alt="Next" width="100px"> -->
+                    <button class="back-button" data-back-to="pose-selection" style="border: 2px solid #E7D0AB; background-color: transparent; color: white; font-family: 'Poppins';  ">
+                        <img src="../public/images/Group (5).png"
+                            alt="Icon" style="width: auto; height: 30px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;"> Kembali </button>
+                    <button id="select-frame-button" class="button-style" style="background-color: #E7D0AB;  color:#572415"><img src="../public/images/Group (7).png" style="width: auto; height: 36px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;"> Selanjutnya</button>
+                </div>
+            </footer>
+        </section>
+        <section id="loading-screen" class="hidden">
+            <header class="header-logo">
+                <img src="../public/images/Logo Atas.svg">
+            </header>
+            <div class="top-section">
+                <div class="container21">
+                    <div class="box"></div>
+                    <div class="box"></div>
+                    <div class="box"></div>
+                    <div class="box"></div>
+                </div>
+            </div>
+            <main>
+                <div class="bottom-section">
+                    <div class="instruction-text">
+                        <h3>SUDAH SIAP UNTUK <br> PEMOTRETAN?</h3>
+                        <p>Pemotretan yang akan diambil maksimal sebanyak 4 foto</p>
+                    </div>
+            </main>
+            <!-- <footer>
+                <div class="button-container">
+                    <button class="back-button" data-back-to="frame-selection" style="border: 2px solid #572415; background-color: transparent; color: #572415; font-family: 'Poppins'; border-radius: 4px; cursor: pointer; display: flex; align-items: center; text-align: center; outline: none; ">
+                        <img src="../public/images/Group (5).png"
+                            alt="Icon">Kembali </button>
+                    <button id="loading-screen-button" class="button-style" style="background-color: #572415;  color:white"><img
+                            src="../public/images/Group (7).png" style=" vertical-align: middle; margin-right: 3px;  width: 60px;">MulaiFoto</button>
+            </footer> -->
+            <footer>
+                <div class="button-container" style="padding: 10px;">
+                    <!-- <img class="next-button-img back-button" data-back-to="pose-selection" src="../public/images/Frame 10.png" alt="Next" width="100px">
+                <img id="select-frame-button" class="next-button-img" src="../public/images/Frame 11 (2).png" alt="Next" width="100px"> -->
+                    <button class="back-button" data-back-to="frame-selection" style="border: 2px solid #572415; background-color: transparent; color: #572415; font-family: 'Poppins';  ">
+                        <img src="../public/images/Group (5).png"
+                            alt="Icon" style="width: auto; height: 30px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;"> Kembali </button>
+                    <button id="loading-screen-button" class="button-style" style="background-color: #572415;  color:white"><img src="../public/images/Group (7).png" style="width: auto; height: 36px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;"> Selanjutnya</button>
+                </div>
+            </footer>
+            </div>
+    </div>
+
+    </section>
+    <div id="flash" class="hidden"></div>
+    <section id="take-photos" class="hidden">
+        <header class="header-logo">
+            <img src="../public/images/Block Atas.svg">
+        </header>
+        <button id="open-ar-settings" class="hidden-button">Open AR Settings</button>
+        <div class="container" id="video-container">
+            <div id="countdown-video-container"></div>
+            <video autoplay="true" id="video-webcam" hidden></video>
+            </video>
+            <canvas id="canvas"></canvas>
+            <div id="countdown" class="countdown-text"></div>
+        </div>
+        
+        <div class="photo-result" id="photo-result" hidden>
+            <div id="photo-counter" class="photo-counter"></div>
+            <video id="photo-video" src="" muted style="width: 90vw; z-index: 9999; "></video>
+        </div>
+    </div>
+        <div id="ar-settings-modal" class="modal hidden">
+            <div class="modal-content">
+                <span id="close-modal" class="close">&times;</span>
+                <h2>AR Settings</h2>
+                <div>
+                    <label for="slider-x">Position X:</label>
+                    <input type="range" id="slider-x" min="-100" max="200" step="0.25" value="0">
+                    <span id="value-x">0</span>
+                </div>
+                <div>
+                    <label for="slider-y">Position Y:</label>
+                    <input type="range" id="slider-y" min="-100" max="1000" step="0.25" value="0">
+                    <span id="value-y">0</span>
+                </div>
+                <div>
+                    <label for="slider-z">Scale Z:</label>
+                    <input type="range" id="slider-z" min="0" max="4" step="0.025" value="0.9">
+                    <span id="value-z">0.9</span>
+                </div>
+                <button id="save-settings">Save Settings</button>
+                <button id="reset-settings">Reset Settings</button>
+                <button id="cancel-settings">Cancel</button>
+            </div>
+        </div>
+        </div>
+    </section>
+
+    <section id="retake-photos" class="hidden">
+    <header class="header-logo">
+        <img src="../public/images/Block Atas.svg">
+    </header>
+    <div class="container" id="video-container">
+        <div id="countdown-video-container2"></div>
+        <video autoplay="true" id="video-webcam" hidden></video>
+        <canvas id="canvas2"></canvas>
+        <div id="countdown" class="countdown-text"></div>
+    </div>
+    <div class="photo-result" id="photo-result" hidden>
+        <video id="photo-video2" src="" muted style="width: 90vw; z-index: 9999;"></video>
+    </div>
+</section>
+
+    <section id="camera-screen" class="hidden">
+        <h2>Camera Screen</h2>
+        <button id="take-photo-button" hidden>Open Camera</button>
+        <div class="loader"></div>
+        <!-- <button class="back-button" data-back-to="loading-screen">Back</button> -->
+    </section>
+
+    <!-- HTML Structure -->
+    <section id="photo-review" class="hidden">
+        <header class="header-logo">
+            <img src="../public/images/Logo Atas.svg">
+        </header>
+        <header class="header-app">
+            <img src="../public/images/Frame 28 (2).png" alt="">
+        </header>
+        <header class="header-app2">
+            <img src="../public/images/Group 234.png" alt="">
+        </header>
+        <header class="header-app2">
+            <img src="../public/images/Frame 307.png" alt="">
+        </header>
+        <!-- <main>
+                <div class="photo-grid">
+                    <div class="photo-frame" id="photo-frame-1">
+                        <img id="captured-photo-1" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 1" />
+                    </div>
+                    <div class="photo-frame" id="photo-frame-2">
+                        <img id="captured-photo-2" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 2" />
+                    </div>
+                    <div class="photo-frame" id="photo-frame-3">
+                        <img id="captured-photo-3" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 3" />
+                    </div>
+                    <div class="photo-frame" id="photo-frame-4">
+                        <img id="captured-photo-4" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 4" />
+                    </div>
+                </div>
+            </main> -->
+        <!-- <main> -->
+        <main>
+            <div class="swiper-container2" style="width: 100vw;">
+                <div class="swiper-wrapper photo-grid" style="width: 900vw;">
+                    <div class="swiper-slide">
+                        <div class="photo-frame" id="photo-frame-1" style="display: none;">
+                            <img id="captured-photo-1" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 1" />
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="photo-frame" id="photo-frame-2">
+                            <img id="captured-photo-2" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 1" />
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="photo-frame" id="photo-frame-3">
+                            <img id="captured-photo-3" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 2" />
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="photo-frame" id="photo-frame-4">
+                            <img id="captured-photo-4" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 3" />
+                        </div>
+                    </div>
+                    <div class="swiper-slide">
+                        <div class="photo-frame" id="photo-frame-5">
+                            <img id="captured-photo-5" class="captured-photo" src="../public/images/giphy.gif" alt="Captured Photo 4" />
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </main>
+        <p id="selected-count" style="background-color: #E7D0AB; border: 5px solid #E7D0AB; border-radius: 5px; padding: 5px; font-size: 3vw;">0 foto terpilih</p>
+        <p style="font-size: 4vw;">Pengambilan ulang foto hanya untuk<br> menggantikan foto yang tidak dipilih.</p>
+        <!-- </main> -->
+        <footer>
+            <div class="button-container">
+                <button id="qr-code" class="hidden" hidden>Kirim Foto</button>
+                <!-- <button id="retake-photo-button" class="back-button" style="background-color: #572415; border: 2px solid #E7D0AB;">
+                       <img src="../public/images/Group (5).png" alt="Icon">Ulangi (1x)
+                   </button> -->
+                <button class="back-button" id="retake-photo-button" style="background-color: transparent; border: 2px solid #572415; font-family: 'Poppins'; border-radius: 4px; cursor: pointer; display: flex; align-items: center; text-align: center; outline: none;  color:#572415">
+                        <img src="../public/images/Group (5).png"
+                            alt="Icon" style="width: auto; height: 36px; vertical-align: middle; margin-right: 10px; margin-bottom: 2px;">Ulangi(1x) </button>
+                <button class="refresh-application" style="background-color: transparent;"><img src="../public/images/Button Home Unfill (2).png" width="40"></button>
+                <!-- <button id="approve-photo-button" class="button-selanjutnya" hidden>
+                       <img src="../public/images/Group (7).png" alt="Icon">Selanjutnya
+                   </button> -->
+                <!-- <button class="back-button" id="retake-photo-button" style="background-color: #572415; border: 2px solid #E7D0AB;"></button> -->
+                <!-- <img src="../public/images/Group (5).png" style=" width: 12px; height: 36px; vertical-align: middle; margin-right: 4px; margin-bottom: 2px; " alt="Icon"> Kembali </button> -->
+                <button id="approve-photo-button" class="button-style" style="background-color: #572415;  color:white; "><img
+                            src="../public/images/Group (7).png">
+                         Selanjutnya</button>
+                <button id="photo-printing" class="hidden" hidden>Cetak Foto</button>
+            </div>
+        </footer>
+    </section>
+    <section id="email-input" class="hidden">
+        <header class="header-logo">
+            <img src="../public/images/Logo Atas.svg">
+        </header>
+        <header class="header-app">
+            <img src="../public/images/Frame 28 (8).png">
+        </header>
+        <main>
+            <div class="carousel-container">
+                <!-- Main slider -->
+                <div class="swiper-container1 slider-for">
+                    <div class="swiper-wrapper photo-grid" style="width: 120vw;">
+                        <!-- Slides will be dynamically added here -->
+                    </div>
+                    <!-- Add Pagination -->
+                    <div class="swiper-pagination" hidden></div>
+                </div>
+            </div>
+        </main>
+        <div class="swal2-footer">
+            <!-- Pastikan elemen footer ada -->
+            <!-- Konten footer seperti tombol -->
+        </div>
+
+        <div class="button-container">
+            <button class="back-button" data-back-to="photo-review" style="border: 2px solid #E7D0AB; background-color: transparent; color: white; font-family: 'Poppins'; font-size: 17px; border-radius: 4px; cursor: pointer; display: flex; align-items: center; text-align: center; outline: none; width: 12vw;">
+                     Kembali
+                </button>
+            <input type="email" id="email" placeholder="" />
+            <button id="submit-email-button" style="background-color: #E7D0AB; color: #572415; font-family: 'Poppins'; font-size:10px; cursor: pointer; display: flex; align-items: center; text-align: center; outline: none; ">
+                    <img src="../public/images/Group (4).png"
+                        style="width: 3vw; height: 2vh; vertical-align: middle; margin-right: 4px; margin-bottom: 2px;">
+            </button>
+        </div>
+        <footer>
+            <div class="simple-keyboard" style="padding:35px; background-color: #572415;"></div>
+        </footer>
+    </section>
+    <div id="loading-indicator-container" style="display: none;">
+        <div class="loader"></div>
+        <p class="loading-text">Harap tunggu, sedang diproses...</p>
+    </div>
+
+    <!-- 
+        <section id="email-input" class="hidden">
+            <img src="../public/images/Frame 28 (3).png" alt="" width="200px">
+            <input type="email" id="email" placeholder="Enter your email" />
+            <button id="submit-email-button">Submit</button>
+            <button class="back-button" data-back-to="photo-review">Back</button>
+        </section> -->
+
+    <section id="qr-scan" class="hidden">
+        <header class="header-logo">
+            <img src="../public/images/Logo Atas.svg">
+        </header>
+        <header class="header-app">
+            <img src="../public/images/Frame 28 (4).png">
+            <div id="photo-thumbnails-final"></div>
+        </header>
+        <main>
+            <div class="image-container">
+                <p id="grossAmountText">50.000</p>
+                <img id="responsiveImage" src="../public/Group 279 (1).png" alt="Product Image">
+            </div>
+        </main>
+        <button id="pay-button" class="button-style fixed-iframe" style="background-color: #E7D0AB;  color:#572415; font-size: 1vh">Lanjutkan Pembayaran -></button>
+        <footer>
+            <div class="button-container">
+                <button id="scan-qr-button" style="display: none;" hidden>Scan QR Code</button>
+                <!-- <button class="refresh-application" style="background-color: transparent;"><img src="../public/images/Button Home Unfill (1).png" width="30">Home</button> -->
+                <button class="back-button" data-back-to="email-input" style="border: 2px solid #E7D0AB; background-color: transparent; color: white; font-family: 'Poppins';  border-radius: 4px; cursor: pointer; display: flex; align-items: center; text-align: center; outline: none;">
+                    <img src="../public/images/Group (5).png" style="width: 40px    ; height: 30px; vertical-align: middle; margin-right: 4px; margin-bottom: 2px;" alt="Icon"> Kembali
+                </button>
+                <button class="back-button refresh-application" style="border: 2px solid #E7D0AB; background-color: transparent; color: white; font-family: 'Poppins';  border-radius: 4px; cursor: pointer; display: flex; align-items: center; text-align: center; outline: none;">
+                    <img src="../public/images/Frame 308.png" style="width: 43px; height: 40px; vertical-align: middle; margin-right: 4px; margin-bottom: 2px;" alt="Icon"> Home
+                </button>
+
+            </div>
+        </footer>
+        <!-- <button class="back-button" data-back-to="email-input">Kembali</button> -->
+    </section>
+    <section id="photo-printing-v2" class="hidden">
+        <header class="header-logo">
+            <img src="../public/images/Logo Atas.svg">
+        </header>
+        <header class="header-app">
+            <img src="../public/images/Frame 28 (7).png">
+        </header>
+        <main>
+            <div class="carousel-container" style="max-width: 200px; height: auto;  object-fit: contain; ">
+                <!-- Main slider -->
+                <div class="swiper-container1 slider-for" >
+                    <div class="swiper-wrapper" style="width: -10vw; height:30vh">
+                        <!-- Slides will be dynamically added here -->
+                    </div>
+                    <!-- Add Pagination -->
+                    <div class="swiper-pagination" hidden></div>
+                </div>
+            </div>
+        </main>
+        <br>
+        <div class="cardfinal" style="color: #572415;">
+            <p class="pickup-info">AYO AMBIL HASIL CETAK FOTOMU DI AREA SOUVENIR</p>
+            <p>Foto digital bersama GM telah dikirim melalui email</p>
+            <p>Tunjukan hasil fotomu untuk mendapatkan hasil cetak</p>
+            <p>Pengambilan foto hanya berlaku di hari yang sama</p>
+        </div>
+        <footer>
+            <div class="button-container">
+                <div class="bottom-section">
+                    <button class="restart-application hidden" style="border: 2px solid #572415; background-color: transparent; color: #572415; font-family: 'Poppins';  border-radius: 4px; cursor: pointer; display: flex; align-items: center; text-align: center; outline: none;"
+                        hidden>Home</button>
+                    <button class="refresh-application" style="border: 2px solid #572415; background-color: transparent; color: #572415; font-family: 'Poppins';  border-radius: 4px; cursor: pointer; outline: none;">Home</button>
+                </div>
+            </div>
+        </footer>
+        <!-- <button class="back-button" data-back-to="email-input">Kembali</button> -->
+    </section>
+    <section id="config-section" class="hidden">
+        <div class="config-container">
+            <h2>Update Configuration</h2>
+            <form id="config-form">
+                <div class="form-group">
+                    <label for="googleDriveFolderId">Google Drive Folder ID:</label>
+                    <input type="text" id="googleDriveFolderId" name="googleDriveFolderId" value="19dLzfnSzevmYMzkZ1M_LxpDBYf2wQWHJ">
+                </div>
+                <div class="form-group">
+                    <label for="emailUser">Email User:</label>
+                    <input type="email" id="emailUser" name="emailUser" value="scuaphotobooth@gmail.com">
+                </div>
+                <div class="form-group">
+                    <label for="emailPass">Email Password:</label>
+                    <input type="password" id="emailPass" name="emailPass" value="fwhtonbhxazbhuix">
+                </div>
+                <div class="form-group">
+                    <label for="midtransServerKey">Midtrans Server Key:</label>
+                    <input type="text" id="midtransServerKey" name="midtransServerKey" value="Mid-server-lOIKg0savNKLksp4lsPwYdCy">
+                </div>
+                <div class="form-group">
+                    <label for="midtransClientKey">Midtrans Client Key:</label>
+                    <input type="text" id="midtransClientKey" name="midtransClientKey" value="Mid-client-rCxQwLCkAkBfkt9T">
+                </div>
+                <button type="submit" class="btn-primary">Update</button>
+                <button type="button" id="close-config-section" class="btn-secondary">Close</button>
+            </form>
+        </div>
+    </section>
+
+   
+
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/swiper@11/swiper-bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    <script src="https://cdn.jsdelivr.net/npm/simple-keyboard@latest/build/index.js"></script>
+    <script src="script.js "></script>
+    <script>
+    let pricePerPhoto = 10000;
+    let selectedCount = 0;
+
+
+    if (localStorage.getItem('pricePerPhoto')) {
+        pricePerPhoto = parseInt(localStorage.getItem('pricePerPhoto')) || 10000;
+    }
+
+
+    const grossAmountText = document.getElementById('grossAmountText'); // Referensi elemen <p>
+    const selectedCountText = document.getElementById('selected-count');
+    const priceInput = document.getElementById('priceInput'); // Referensi input harga per foto
+
+ 
+    priceInput.value = pricePerPhoto; 
+
+
+function updateGrossAmount() {
+    const grossAmount = selectedCount * pricePerPhoto;
+    grossAmountText.textContent = grossAmount.toLocaleString('id-ID', { 
+        style: 'currency', 
+        currency: 'IDR', 
+        minimumFractionDigits: 0, 
+        maximumFractionDigits: 0 
+    });
+}
+
+// Event listener untuk mengubah harga per foto dari input
+priceInput.addEventListener('input', function() {
+    pricePerPhoto = parseInt(this.value) || 0; // Ubah pricePerPhoto sesuai input, default ke 0 jika kosong
+    localStorage.setItem('pricePerPhoto', pricePerPhoto); // Simpan ke Local Storage
+    updateGrossAmount(); // Perbarui tampilan grossAmount
+});
+
+// Ambil semua elemen gambar
+const photos = document.querySelectorAll('.captured-photo');
+
+// Tambahkan event listener untuk setiap gambar
+photos.forEach(photo => {
+    photo.addEventListener('click', function() {
+        if (this.classList.contains('img.selected')) {
+            this.classList.remove('img.selected');
+            selectedCount--;
+        } else {
+            this.classList.add('img.selected');
+            selectedCount++;
+        }
+
+        // Perbarui teks jumlah foto yang dipilih dan grossAmount secara langsung
+        selectedCountText.textContent = `${selectedCount} foto terpilih`;
+        updateGrossAmount(); // Panggil fungsi untuk memperbarui tampilan grossAmount
+    });
+});
+
+// Ambil nilai dari Local Storage untuk ditampilkan saat halaman dimuat
+updateGrossAmount(); // Panggil fungsi untuk memperbarui tampilan grossAmount
+
+// Event listener untuk tombol 'pay-button'
+document.getElementById('pay-button').addEventListener('click', function() {
+    // Hitung grossAmount terbaru saat tombol diklik
+    const grossAmount = selectedCount * pricePerPhoto;
+
+    const orderData = {
+        transaction_details: {
+            order_id: 'order-id-' + new Date().getTime(),
+            gross_amount: grossAmount
+        },
+        customer_details: {
+            first_name: 'Pelanggan',
+            last_name: 'Photobooth SCUA',
+            email: document.getElementById('email').value,
+            phone: '08123456789'
+        }
+    };
+    fetch('http://localhost:3000/create-transaction', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(orderData)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.token) {
+                // Create a backdrop element
+                const backdrop = document.createElement('div');
+                backdrop.style.position = 'fixed';
+                backdrop.style.top = '-82vh';
+                backdrop.style.left = '0';
+                backdrop.style.width = '100%';
+                backdrop.style.height = '100%';
+                backdrop.style.backgroundColor = 'rgba(0, 0, 0, 0.5)'; // Semi-transparent black
+                backdrop.style.zIndex = '999'; // Ensure it's above other elements
+                document.body.appendChild(backdrop);
+
+                snap.pay(data.token, {
+                    onSuccess: function(result) {
+                        console.log('Payment success:', result);
+                        sendEmail(); // Send email after successful payment
+                        document.body.removeChild(backdrop); // Remove backdrop on success
+                    },
+                    onPending: function(result) {
+                        console.log('Payment pending:', result);
+                        document.body.removeChild(backdrop); // Remove backdrop on pending
+                    },
+                    onError: function(result) {
+                        console.log('Payment error:', result);
+                        document.body.removeChild(backdrop); // Remove backdrop on error
+                    },
+                    onClose: function() {
+                        console.log('User closed the popup');
+                        document.body.removeChild(backdrop); // Remove backdrop on close
+                    }
+                });
+
+                // Gunakan delay singkat untuk memastikan iframe Snap sudah dimuat
+                setTimeout(function() {
+                    const snapIframe = document.querySelector('iframe');
+                    if (snapIframe) {
+                        snapIframe.style.position = 'fixed'; // Gunakan posisi fixed untuk iframe
+                        snapIframe.style.bottom = '-18vh'; // Posisikan di bawah layar
+                        snapIframe.style.top = 'auto'; // Jangan gunakan 'top'
+                        snapIframe.style.zIndex = '1000'; // Ensure iframe is above the backdrop
+                    }
+                }, 500); // Sesuaikan delay jika perlu
+
+            } else {
+                console.error('Transaction token not received');
+            }
+        })
+        .catch(error => {
+            console.error('Error creating transaction:', error);
+        });
+});
+            function showLoader() {
+            document.getElementById('loading-indicator-container').style.display = 'flex';
+        }
+
+        function hideLoader() {
+            document.getElementById('loading-indicator-container').style.display = 'none';
+        }
+
+        // Function to send email and show photo printing section
+        function sendEmail() {
+            const email = document.getElementById('email').value;
+            const selectedPhotos = [];
+
+            document.querySelectorAll(".photo-grid img.selected").forEach((img) => {
+                selectedPhotos.push(img.src);
+            });
+
+            // Tampilkan loading indicator dan disable semua tombol
+            showLoader();
+            disableButtons(true);
+
+            fetch('http://localhost:3000/send-email', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        photos: selectedPhotos
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        uploadToDrive(email, selectedPhotos); // Panggil fungsi untuk upload ke Google Drive
+                        document.getElementById('qr-scan').classList.add('hidden');
+                        document.getElementById('photo-printing-v2').classList.remove('hidden');
+                        Swal.fire('Success', 'Email sent successfully', 'success');
+                    } else {
+                        Swal.fire('Error', 'Failed to send email', data.message || 'Unknown error');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error:', error);
+                    Swal.fire('Error', 'Failed to send email', error.message || 'Unknown error');
+                })
+                .finally(() => {
+                    // Sembunyikan loading indicator dan enable semua tombol setelah proses selesai
+                    hideLoader();
+                    disableButtons(false);
+                });
+        }
+
+        function disableButtons(isDisabled) {
+            const buttons = document.querySelectorAll('button');
+            buttons.forEach((button) => {
+                button.disabled = isDisabled;
+            });
+        }
+
+
+
+        // Function to upload images to Google Drive
+        function uploadToDrive(email, photos) {
+            fetch('http://localhost:3000/upload', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        email: email,
+                        photos: photos
+                    }),
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        console.log('Images uploaded to Google Drive successfully');
+                    } else if (data.authUrl) {
+                        // Redirect the user to the authorization URL if authentication is needed
+                        window.location.href = data.authUrl;
+                    } else {
+                        console.error('Failed to upload images to Google Drive');
+                    }
+                })
+                .catch((error) => {
+                    console.error('Error uploading images to Google Drive:', error);
+                });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const refreshAllSections = () => {
+                // Muat ulang seluruh halaman untuk menyegarkan semua section
+                location.reload();
+            };
+
+            // Event listener untuk tombol refresh
+            document.querySelectorAll('.refresh-application').forEach(button => {
+                button.addEventListener('click', () => {
+                    refreshAllSections();
+                });
+            });
+
+            // Event listener untuk keyboard
+            document.addEventListener('keydown', (event) => {
+                const isMac = navigator.platform.includes('Mac');
+                if ((isMac && event.metaKey && event.key === 'r') || (!isMac && event.ctrlKey && event.key === 'r')) {
+                    refreshAllSections();
+                    event.preventDefault(); // Mencegah penyegaran halaman secara keseluruhan jika tidak diinginkan
+                }
+            });
+        });
+
+
+        // Mengambil elemen tombol dan section
+        const button = document.querySelector('.back-button');
+        const anotherSection = document.getElementById('photo-printing-v2');
+
+
+
+        //      const observer = new IntersectionObserver((entries) => {
+        //         entries.forEach(entry => {
+        //             if (entry.isIntersecting) {
+        //                 startCountdown1();
+        //             } else {
+        //                stopCountdown1();
+        //           }
+        //        });
+        //   });
+        //  observer.observe(anotherSection); 
+
+        // Event listener untuk tombol yang kembali ke welcome screen
+        button.addEventListener('click', () => {
+            document.getElementById(button.dataset.backTo).classList.add('active');
+            anotherSection.classList.remove('active');
+        });
+
+       var swiper = new Swiper('.swiper-container1', {
+            slidesPerView: 1,
+            spaceBetween: 0,
+            centeredSlides: true,
+            loop: false,
+            initialSlide: 1, // Set to the middle slide index for initial positioning
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+            breakpoints: {
+                640: {
+                    slidesPerView: 3,
+                    centeredSlides: true,
+                },
+                768: {
+                    slidesPerView: 3,
+                    centeredSlides: true,
+                },
+                1024: {
+                    slidesPerView: 3,
+                    centeredSlides: true,
+                }
+            }
+        });
+
+        var swiper = new Swiper('.swiper-container2', {
+            slidesPerView: 'auto', // Menampilkan slide sesuai lebar konten
+            spaceBetween: 10, // Jarak antar slide
+            centeredSlides: false, // Slide tidak berada di tengah
+            initialSlide: 0, // Memulai tampilan dari slide pertama
+            pagination: {
+                el: '.swiper-pagination',
+                clickable: true,
+            },
+            breakpoints: {
+                640: {
+                    slidesPerView: 3, // Pada layar kecil, tampilkan 3 slide
+                },
+                768: {
+                    slidesPerView: 3, // Pada layar menengah, tampilkan 3 slide
+                },
+                1024: {
+                    slidesPerView: 3, // Pada layar besar, tampilkan 3 slide
+                }
+            }
+        });
+
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const frameOptions = document.querySelectorAll('.frame-option');
+            const slider = document.querySelector('.slider');
+
+            console.log('Frame Options:', frameOptions);
+            console.log('Slider:', slider);
+
+            if (slider) {
+                frameOptions.forEach((option, index) => {
+                    option.addEventListener('click', () => {
+                        const offset = -index * (option.offsetWidth + 10); // Adjust spacing
+                        slider.style.transform = `translateX(${offset}px)`;
+                    });
+                });
+            } else {
+                console.error('Slider element not found.');
+            }
+        });
+    </script>
+
+    <script>
+        const container = document.querySelector('.container21');
+
+        setInterval(() => {
+            container.classList.toggle('active');
+        }, 5000);
+    </script>
+    <script>
+        document.getElementById('close-btn').addEventListener('click', () => {
+            // Jika menggunakan Electron.js
+            if (window.electron && window.electron.ipcRenderer) {
+                window.electron.ipcRenderer.send('close-app');
+            } else {
+                // Untuk aplikasi web biasa
+                window.close();
+            }
+        });
+
+        let stream = videoElement.srcObject;
+        if (stream) {
+            let tracks = stream.getTracks();
+            tracks.forEach(track => track.stop());
+        }
+    </script>
+
+    <!-- <script>
+    let pricePerPhoto = 10000; // Harga per foto awal
+    let selectedCount = 0;
+    const grossAmountText = document.getElementById('grossAmountText'); // Referensi elemen <p>
+    const selectedCountText = document.getElementById('selected-count');
+    const priceInput = document.getElementById('priceInput'); // Referensi input harga per foto
+
+    // Fungsi untuk menghitung dan memperbarui grossAmount
+    function updateGrossAmount() {
+        const grossAmount = selectedCount * pricePerPhoto;
+        grossAmountText.textContent = grossAmount.toLocaleString('id-ID', { 
+            style: 'currency', 
+            currency: 'IDR', 
+            minimumFractionDigits: 0, 
+            maximumFractionDigits: 0 
+        });
+    }
+
+    // Event listener untuk mengubah harga per foto dari input
+    priceInput.addEventListener('input', function() {
+        pricePerPhoto = parseInt(this.value) || 0; // Ubah pricePerPhoto sesuai input, default ke 0 jika kosong
+        updateGrossAmount(); // Perbarui tampilan grossAmount
+    });
+
+    // Ambil semua elemen gambar
+    const photos = document.querySelectorAll('.captured-photo');
+
+    // Tambahkan event listener untuk setiap gambar
+    photos.forEach(photo => {
+        photo.addEventListener('click', function() {
+            if (this.classList.contains('img.selected')) {
+                this.classList.remove('img.selected');
+                selectedCount--;
+            } else {
+                this.classList.add('img.selected');
+                selectedCount++;
+            }
+
+            // Perbarui teks jumlah foto yang dipilih dan grossAmount secara langsung
+            selectedCountText.textContent = `${selectedCount} foto terpilih`;
+            updateGrossAmount(); // Panggil fungsi untuk memperbarui tampilan grossAmount
+        });
+    });
+
+    </script> -->
+    <script>
+        const videoWebcam = document.getElementById('canvas');
+        videoWebcam.addEventListener('timeupdate', function() {
+            if (videoWebcam.currentTime >= 7) {
+                videoWebcam.pause();
+                console.log('Video paused at 7 seconds');
+            }
+        });
+    </script>
+</body>
+
+</html>
+
+</html>

@@ -1,0 +1,8 @@
+{
+    "files.associations": {
+        "*.html": "html",
+        "*.js": "javascript"
+    },
+    "editor.defaultFormatter": "esbenp.prettier-vscode",
+    "bookmarks.useWorkaroundForFormatters": true
+}
